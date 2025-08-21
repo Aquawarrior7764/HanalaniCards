@@ -1,11 +1,15 @@
 import { createPlayer } from '../api.js';
+
 export function view() {
   const root = document.createElement('section');
   const key = localStorage.getItem('playerKey');
+
   if (key) {
-    root.innerHTML = `<p>Ready. Your key is stored. Go to <a href="#cards">Cards</a> or <a href="#play">Play</a>.</p>`;
+    const name = localStorage.getItem('playerName') || 'Player';
+    root.innerHTML = `<p>Signed in as <b>${name}</b>. Go to <a href="#cards">Cards</a> or <a href="#play">Play</a>.</p>`;
     return root;
   }
+
   root.innerHTML = `
     <h2>Create Player</h2>
     <form id="f">
@@ -15,16 +19,25 @@ export function view() {
     </form>
     <h3>Or paste existing key</h3>
     <input id="k" placeholder="player-api-key">
-    <button id="save">Save Key</button>`;
+    <button id="save">Save Key</button>
+    <p id="msg"></p>`;
+
+  const msg = root.querySelector('#msg');
+
   root.querySelector('#f').onsubmit = async (e) => {
     e.preventDefault();
-    const form = new FormData(e.target);
-    const r = await createPlayer(form.get('name'), form.get('email'));
-    localStorage.setItem('playerKey', r.key);
-    localStorage.setItem('playerId', r.id);
-    localStorage.setItem('playerName', r.name);
-    location.hash = '#cards';
+    try {
+      const form = new FormData(e.target);
+      const r = await createPlayer(form.get('name'), form.get('email')); // {id,name,key,...}
+      // Persist auth locally so users stay signed in on refresh
+      localStorage.setItem('playerKey', r.key);
+      localStorage.setItem('playerId', r.id);
+      localStorage.setItem('playerName', r.name);
+      localStorage.setItem('playerEmail', form.get('email'));
+      location.hash = '#cards';
+    } catch (err) { msg.textContent = err.message; }
   };
+
   root.querySelector('#save').onclick = () => {
     const k = root.querySelector('#k').value.trim();
     if (k) { localStorage.setItem('playerKey', k); location.hash = '#cards'; }
