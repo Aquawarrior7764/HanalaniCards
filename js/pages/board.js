@@ -1,5 +1,11 @@
 import { getBoard, playCard, getMyCards, getGame } from '../api.js';
 
+const val = (o, ks) => ks.find(k => o && o[k] != null) ? o[ks.find(k => o[k] != null)] : undefined;
+const pcId = (pc) => val(pc, ['PlayerCardId','playerCardId','Id','id']);
+const nameOf = (pc) => val(pc, ['Name','CardName','name']) || `Card`;
+const N = (pc) => val(pc, ['N','n']); const E = (pc) => val(pc, ['E','e']);
+const S = (pc) => val(pc, ['S','s']); const W = (pc) => val(pc, ['W','w']);
+
 export function view(params) {
   const gameId = params.get('game');
   const root = document.createElement('section');
@@ -24,7 +30,7 @@ export function view(params) {
       d.onclick = async () => {
         if (!selectedCard || c.CardId) return;
         try {
-          await playCard(gameId, c.CellId, selectedCard.playerCardId); // use player-card Id
+          await playCard(gameId, c.CellId, selectedCard.playerCardId);
           selectedCard = null;
           await load();
         } catch (e) { msg.textContent = e.message; }
@@ -41,7 +47,7 @@ export function view(params) {
     turn.textContent = gameState.Completed ? `Completed — Winner: ${gameState.Winner || '—'}` :
                      (gameState.CurrentTurn ? `Turn: ${gameState.CurrentTurn}` : 'Waiting...');
     hand.innerHTML = (mine.deck || []).map(pc =>
-      `<button class="card" data-id="${pc.Id}">${pc.Name || 'Card'} (N${pc.n} E${pc.e} S${pc.s} W${pc.w})</button>`
+      `<button class="card" data-id="${pcId(pc)}">${nameOf(pc)} (N${N(pc)} E${E(pc)} S${S(pc)} W${W(pc)})</button>`
     ).join('') || '<p>(Deck empty)</p>';
   }
 
