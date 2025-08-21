@@ -13,7 +13,6 @@ async function handle(res) {
   }
   return res.json();
 }
-const guidish = s => typeof s === 'string' && /^[0-9a-fA-F-]{16,}$/i.test(s);
 
 // Players
 export async function createPlayer(name, email) {
@@ -33,14 +32,15 @@ export async function getMyCards() {
   return handle(res); // { deck:[{Id,Name,n,e,s,w,Path,...}], pool:[...] }
 }
 
-// Move helpers: try both documented routes in case server expects one form
+// Some docs show /players/cards/move, others /cards/move.
+// Try the /players/... route first; if it complains about pattern/404, try /cards/...
 async function move(path) {
   const res = await fetch(`${API_BASE}${path}`, { method:'PATCH', headers: headers(true) });
   return handle(res);
 }
 export async function moveToDeck(playerCardId) {
   const id = String(playerCardId || '').trim();
-  if (!guidish(id)) throw new Error('This card has no valid id to move.');
+  if (!id) throw new Error('This card has no valid id to move.');
   try {
     return await move(`/players/cards/move/${encodeURIComponent(id)}/to/deck`);
   } catch (e) {
@@ -52,7 +52,7 @@ export async function moveToDeck(playerCardId) {
 }
 export async function moveToPool(playerCardId) {
   const id = String(playerCardId || '').trim();
-  if (!guidish(id)) throw new Error('This card has no valid id to move.');
+  if (!id) throw new Error('This card has no valid id to move.');
   try {
     return await move(`/players/cards/move/${encodeURIComponent(id)}/to/pool`);
   } catch (e) {
