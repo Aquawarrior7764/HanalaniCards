@@ -1,11 +1,8 @@
 import { getMyCards, moveToDeck, moveToPool } from '../api.js';
 
-// Helpers to handle unknown field casing from API
-const val = (o, ks) => ks.find(k => o && o[k] != null) ? o[ks.find(k => o[k] != null)] : undefined;
-const pcId = (pc) => val(pc, ['PlayerCardId','playerCardId','Id','id']);
-const nameOf = (pc) => val(pc, ['Name','CardName','name']) || `Card`;
-const N = (pc) => val(pc, ['N','n']); const E = (pc) => val(pc, ['E','e']);
-const S = (pc) => val(pc, ['S','s']); const W = (pc) => val(pc, ['W','w']);
+const pcId = (pc) => pc?.Id ?? pc?.PlayerCardId ?? pc?.playerCardId ?? pc?.id ?? null;
+const N = (pc) => pc?.N ?? pc?.n; const E = (pc) => pc?.E ?? pc?.e;
+const S = (pc) => pc?.S ?? pc?.s; const W = (pc) => pc?.W ?? pc?.w;
 
 export function view() {
   const root = document.createElement('section');
@@ -15,18 +12,24 @@ export function view() {
 
   const render = async () => {
     try {
-      const data = await getMyCards(); // { deck:[{...}], pool:[{...}] }
-      const deckHtml = (data.deck || []).map(pc => `
-        <div class="card">
-          <div><b>${nameOf(pc)}</b> — N${N(pc)} E${E(pc)} S${S(pc)} W${W(pc)}</div>
-          <button data-id="${pcId(pc)}" data-act="pool">Move to Pool</button>
-        </div>`).join('') || '<p>(Deck empty)</p>';
+      const data = await getMyCards(); // { deck:[{Id,Name,...}], pool:[...] }
+      const deckHtml = (data.deck || []).map(pc => {
+        const id = pcId(pc);
+        return `<div class="card">
+          <div><b>${pc?.Name || 'Card'}</b> — N${N(pc)} E${E(pc)} S${S(pc)} W${W(pc)}</div>
+          <div style="font-size:.8em;opacity:.6">id: ${id || '(missing)'}</div>
+          <button ${id ? '' : 'disabled'} data-id="${id ?? ''}" data-act="pool">Move to Pool</button>
+        </div>`;
+      }).join('') || '<p>(Deck empty)</p>';
 
-      const poolHtml = (data.pool || []).map(pc => `
-        <div class="card">
-          <div><b>${nameOf(pc)}</b> — N${N(pc)} E${E(pc)} S${S(pc)} W${W(pc)}</div>
-          <button data-id="${pcId(pc)}" data-act="deck">Move to Deck</button>
-        </div>`).join('') || '<p>(Pool empty)</p>';
+      const poolHtml = (data.pool || []).map(pc => {
+        const id = pcId(pc);
+        return `<div class="card">
+          <div><b>${pc?.Name || 'Card'}</b> — N${N(pc)} E${E(pc)} S${S(pc)} W${W(pc)}</div>
+          <div style="font-size:.8em;opacity:.6">id: ${id || '(missing)'}</div>
+          <button ${id ? '' : 'disabled'} data-id="${id ?? ''}" data-act="deck">Move to Deck</button>
+        </div>`;
+      }).join('') || '<p>(Pool empty)</p>';
 
       root.querySelector('#deck').innerHTML = `<h3>Deck (max 5)</h3>${deckHtml}`;
       root.querySelector('#pool').innerHTML = `<h3>Pool</h3>${poolHtml}`;
@@ -41,7 +44,11 @@ export function view() {
       if (btn.dataset.act === 'deck') await moveToDeck(btn.dataset.id);
       else await moveToPool(btn.dataset.id);
       await render();
-    } catch (e2) { msg.textContent = e2.message; btn.disabled = false; }
+    } catch (e2) { 
+      // Show exact API message (409 when deck full, 404 when not in source, etc.)
+      msg.textContent = e2.message; 
+      btn.disabled = false; 
+    }
   });
 
   render();
