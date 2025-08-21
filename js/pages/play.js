@@ -5,21 +5,28 @@ export function view() {
   root.innerHTML = `
     <h2>Play</h2>
     <button id="create">Create Game</button>
-    <div id="created"></div>
+    <div id="created" style="margin:.5rem 0;"></div>
     <h3>Join by Code</h3>
     <input id="code" placeholder="GAME_ID">
     <button id="join">Join</button>
     <h3>Open Games</h3>
     <div id="list"></div>
-    <p id="msg"></p>`;
+    <p id="msg" style="color:#b00"></p>`;
+
   const msg = root.querySelector('#msg');
 
   root.querySelector('#create').onclick = async () => {
     try {
       const g = await createGame();      // -> { id }
-      const div = root.querySelector('#created');
-      div.innerHTML = `Game created: <b>${g.id}</b> <button id="goto">Open Board</button>`;
-      div.querySelector('#goto').onclick = () => location.hash = `#board?game=${g.id}`;
+      root.querySelector('#created').innerHTML =
+        `Game created: <b>${g.id}</b> &nbsp;
+         <button id="goto">Open Board</button>
+         <button id="copy">Copy Code</button>`;
+      root.querySelector('#goto').onclick = () => location.hash = `#board?game=${g.id}`;
+      root.querySelector('#copy').onclick = async () => {
+        try { await navigator.clipboard.writeText(g.id); } catch {}
+      };
+      msg.textContent = '';
     } catch (e) { msg.textContent = e.message; }
   };
 
@@ -33,8 +40,9 @@ export function view() {
   (async () => {
     try {
       const games = await findOpenGames();
-      root.querySelector('#list').innerHTML = games.map(g =>
-        `<div>${g.id} | turn: ${g.CurrentTurn || '-'} | <button data-id="${g.id}">Join</button></div>`).join('');
+      root.querySelector('#list').innerHTML = (games || []).map(g =>
+        `<div>${g.id} | turn: ${g.CurrentTurn || '-'}
+          | <button data-id="${g.id}">Join</button></div>`).join('');
     } catch {}
   })();
 
@@ -43,5 +51,6 @@ export function view() {
     try { await joinGame(btn.dataset.id); location.hash = `#board?game=${btn.dataset.id}`; }
     catch (e2) { msg.textContent = e2.message; }
   });
+
   return root;
 }
