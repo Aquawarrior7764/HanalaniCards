@@ -2,7 +2,7 @@ export const API_BASE = 'https://app-nineturns-dev-aqd8f2dmhtg5e0hw.centralus-01
 
 function key() { return localStorage.getItem('playerKey') || ''; }
 function headers(auth=false) {
-  const h = {'Content-Type': 'application/json'};
+  const h = {'Content-Type':'application/json'};
   if (auth) h['player-api-key'] = key();
   return h;
 }
@@ -13,35 +13,54 @@ async function handle(res) {
   }
   return res.json();
 }
+const guidish = s => typeof s === 'string' && /^[0-9a-fA-F-]{16,}$/i.test(s);
 
 // Players
 export async function createPlayer(name, email) {
   const res = await fetch(`${API_BASE}/players/create`, {
-    method: 'POST', headers: headers(), body: JSON.stringify({name, email})
+    method:'POST', headers: headers(), body: JSON.stringify({name, email})
   });
-  return handle(res); // { id, name, clan, key, deck: [] }
+  return handle(res); // { id, name, key, ... }
 }
 export async function getPlayer(playerId) {
-  const res = await fetch(`${API_BASE}/players/${playerId}`, { headers: headers(true) });
-  return handle(res); // { id, name, ... }
+  const res = await fetch(`${API_BASE}/players/${encodeURIComponent(playerId)}`, { headers: headers(true) });
+  return handle(res);
 }
 
 // Cards (owned by player)
 export async function getMyCards() {
   const res = await fetch(`${API_BASE}/players/cards`, { headers: headers(true) });
-  return handle(res); // { deck:[{...}], pool:[{...}] }
+  return handle(res); // { deck:[{Id,Name,n,e,s,w,Path,...}], pool:[...] }
+}
+
+// Move helpers: try both documented routes in case server expects one form
+async function move(path) {
+  const res = await fetch(`${API_BASE}${path}`, { method:'PATCH', headers: headers(true) });
+  return handle(res);
 }
 export async function moveToDeck(playerCardId) {
-  const res = await fetch(`${API_BASE}/players/cards/move/${playerCardId}/to/deck`, {
-    method: 'PATCH', headers: headers(true)
-  });
-  return handle(res);
+  const id = String(playerCardId || '').trim();
+  if (!guidish(id)) throw new Error('This card has no valid id to move.');
+  try {
+    return await move(`/players/cards/move/${encodeURIComponent(id)}/to/deck`);
+  } catch (e) {
+    if (/pattern|not found|404/i.test(String(e.message))) {
+      return await move(`/cards/move/${encodeURIComponent(id)}/to/deck`);
+    }
+    throw e;
+  }
 }
 export async function moveToPool(playerCardId) {
-  const res = await fetch(`${API_BASE}/players/cards/move/${playerCardId}/to/pool`, {
-    method: 'PATCH', headers: headers(true)
-  });
-  return handle(res);
+  const id = String(playerCardId || '').trim();
+  if (!guidish(id)) throw new Error('This card has no valid id to move.');
+  try {
+    return await move(`/players/cards/move/${encodeURIComponent(id)}/to/pool`);
+  } catch (e) {
+    if (/pattern|not found|404/i.test(String(e.message))) {
+      return await move(`/cards/move/${encodeURIComponent(id)}/to/pool`);
+    }
+    throw e;
+  }
 }
 
 // Games
@@ -51,24 +70,24 @@ export async function createGame() {
 }
 export async function findOpenGames() {
   const res = await fetch(`${API_BASE}/games/find`, { headers: headers(true) });
-  return handle(res); // [...]
+  return handle(res);
 }
 export async function joinGame(gameId) {
-  const res = await fetch(`${API_BASE}/games/join/${gameId}`, { headers: headers(true) });
+  const res = await fetch(`${API_BASE}/games/join/${encodeURIComponent(gameId)}`, { headers: headers(true) });
   return handle(res);
 }
 export async function getGame(gameId) {
-  const res = await fetch(`${API_BASE}/games/${gameId}`, { headers: headers(true) });
-  return handle(res); // { id, CurrentTurn, Completed, Winner, ... }
+  const res = await fetch(`${API_BASE}/games/${encodeURIComponent(gameId)}`, { headers: headers(true) });
+  return handle(res);
 }
 export async function getBoard(gameId) {
-  const res = await fetch(`${API_BASE}/games/${gameId}/board`, { headers: headers(true) });
-  return handle(res); // [{ CellId, Row, Column, PlayerId, CardId }, ...]
+  const res = await fetch(`${API_BASE}/games/${encodeURIComponent(gameId)}/board`, { headers: headers(true) });
+  return handle(res);
 }
 export async function playCard(gameId, cellId, playerCardId) {
-  const res = await fetch(`${API_BASE}/games/${gameId}/board`, {
+  const res = await fetch(`${API_BASE}/games/${encodeURIComponent(gameId)}/board`, {
     method:'PATCH', headers: headers(true),
-    body: JSON.stringify({ cell: cellId, card: playerCardId })
+    body: JSON.stringify({ cell: String(cellId), card: String(playerCardId) })
   });
   return handle(res);
 }
