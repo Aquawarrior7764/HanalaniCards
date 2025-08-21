@@ -41,8 +41,12 @@ export function view(){
       btn.disabled = true;
       if (btn.dataset.act==='deck') await moveToDeck(btn.dataset.id);
       else await moveToPool(btn.dataset.id);
+    }catch(e2){
+      // Show the server message but still sync the UI in case the move applied
+      msg.textContent = e2.message;
+    } finally {
       await render();
-    }catch(e2){ msg.textContent = e2.message; btn.disabled = false; }
+    }
   });
 
   render();
