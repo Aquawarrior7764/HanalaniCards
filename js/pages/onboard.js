@@ -1,4 +1,5 @@
 import { createPlayer } from '../api.js';
+import { RECOVERY_URL } from '../config.js';
 
 export function view(params = new URLSearchParams()) {
   const root = document.createElement('section');
@@ -31,9 +32,16 @@ export function view(params = new URLSearchParams()) {
       <input placeholder="Email (for key reset)" name="email" type="email" required>
       <button>Create</button>
     </form>
+
     <h3>Or paste existing key</h3>
     <input id="k" placeholder="player-api-key">
     <button id="save">Save Key</button>
+
+    ${RECOVERY_URL ? `
+      <h3>Recover by Email</h3>
+      <input id="recEmail" type="email" placeholder="Email">
+      <button id="recover">Send me my key</button>` : ''}
+
     <p id="msg" style="color:#b00"></p>`;
 
   const msg = root.querySelector('#msg');
@@ -44,12 +52,20 @@ export function view(params = new URLSearchParams()) {
       const form = new FormData(e.target);
       const name = form.get('name');
       const email = form.get('email');
-      const r = await createPlayer(name, email); // { id, name, key, ... }
-      // Persist so user stays logged in
+      const r = await createPlayer(name, email); // {id,name,key,...}
       localStorage.setItem('playerKey', r.key);
       localStorage.setItem('playerId', r.id);
       localStorage.setItem('playerName', r.name || name);
       localStorage.setItem('playerEmail', email);
+
+      // Optionally register email→key with your recovery service
+      if (RECOVERY_URL) {
+        fetch(`${RECOVERY_URL}/register`, {
+          method:'POST', headers:{'Content-Type':'application/json'},
+          body: JSON.stringify({ email, key: r.key, name: r.name || name })
+        }).catch(()=>{});
+      }
+
       location.hash = '#cards';
     } catch (err) { msg.textContent = err.message; }
   };
@@ -60,6 +76,22 @@ export function view(params = new URLSearchParams()) {
     localStorage.setItem('playerKey', k);
     location.hash = '#cards';
   };
+
+  const recoverBtn = root.querySelector('#recover');
+  if (recoverBtn) {
+    recoverBtn.onclick = async () => {
+      const email = root.querySelector('#recEmail').value.trim();
+      if (!email) return;
+      try {
+        const res = await fetch(`${RECOVERY_URL}/recover?email=${encodeURIComponent(email)}`);
+        const { key } = await res.json();
+        if (!key) throw new Error('No key found for that email.');
+        localStorage.setItem('playerKey', key);
+        localStorage.setItem('playerEmail', email);
+        location.hash = '#cards';
+      } catch (e) { msg.textContent = e.message; }
+    };
+  }
 
   return root;
 }
