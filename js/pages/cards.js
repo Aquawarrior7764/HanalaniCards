@@ -1,5 +1,4 @@
 import { getMyCards, moveToDeck, moveToPool } from '../api.js';
-
 export function view() {
   const root = document.createElement('section');
   root.innerHTML = `<h2>My Cards</h2>
@@ -8,7 +7,7 @@ export function view() {
 
   const render = async () => {
     try {
-      const data = await getMyCards(); // { deck:[{Id,Name,...}], pool:[...] }
+      const data = await getMyCards(); // { deck:[{Id,Name,n,e,s,w,...}], pool:[...] }
       const deckHtml = (data.deck || []).map(pc => `
         <div class="card">
           <div><b>${pc.Name || 'Card'}</b> — N${pc.n} E${pc.e} S${pc.s} W${pc.w}</div>
