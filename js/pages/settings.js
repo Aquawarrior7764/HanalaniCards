@@ -12,11 +12,12 @@ export function view() {
     <h2>Settings</h2>
     <p><b>Name:</b> <span id="nm">${name0 || '(unknown)'}</span></p>
     <p><b>Email (local only):</b> <span id="em">${email || '(unknown)'}</span></p>
-    <p><b>Player ID:</b> <code>${pid || '(none)'}</code></p>
     <p><b>API Key:</b> <input id="k" value="${key}" style="width:100%"></p>
-    <button id="copy">Copy Key</button>
-    <button id="save">Save</button>
-    <button id="logout">Log out</button>
+    <div style="display:flex; gap:.5rem; margin:.3rem 0 1rem 0">
+      <button id="copy">Copy Key to Clipboard</button>
+      <button id="save">Save Key to Device</button>
+      <button id="logout">Log out</button>
+    </div>
     <h3>Account link (use to log in on another device)</h3>
     <input id="link" style="width:100%" readonly
       value="${location.origin + location.pathname}#onboard?key=${encodeURIComponent(key)}&name=${encodeURIComponent(name0)}">
@@ -24,16 +25,15 @@ export function view() {
     <p style="opacity:.7;margin-top:1rem">Version: <code id="ver">${APP_VERSION}</code></p>
     <p id="msg" style="color:#b00"></p>`;
 
-  const nm = root.querySelector('#nm');
-
-  // Refresh name from server if we can (email is not returned by API; it's local only)
+  // Refresh name from server if possible (email is never returned by API)
   if (pid && key) {
     getPlayer(pid).then(p => {
       if (p?.name) {
         localStorage.setItem('playerName', p.name);
-        nm.textContent = p.name;
+        const nm = root.querySelector('#nm');
+        if (nm) nm.textContent = p.name;
         const link = root.querySelector('#link');
-        link.value = `${location.origin + location.pathname}#onboard?key=${encodeURIComponent(key)}&name=${encodeURIComponent(p.name)}`;
+        if (link) link.value = `${location.origin + location.pathname}#onboard?key=${encodeURIComponent(key)}&name=${encodeURIComponent(p.name)}`;
       }
     }).catch(()=>{});
   }
@@ -46,7 +46,7 @@ export function view() {
   };
   root.querySelector('#save').onclick = () => {
     localStorage.setItem('playerKey', root.querySelector('#k').value.trim());
-    alert('Saved');
+    alert('Saved to this device');
   };
   root.querySelector('#logout').onclick = () => { localStorage.clear(); location.hash = '#onboard'; };
   return root;
