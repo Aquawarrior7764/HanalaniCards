@@ -12,14 +12,13 @@ export function view() {
     <h3>Open Games</h3>
     <div id="list"></div>
     <p id="msg" style="color:#b00"></p>`;
-
   const msg = root.querySelector('#msg');
 
   root.querySelector('#create').onclick = async () => {
     try {
       const g = await createGame();      // -> { id }
       root.querySelector('#created').innerHTML =
-        `Game created: <b>${g.id}</b> &nbsp;
+        `Game created: <b>${g.id}</b> &nbsp; 
          <button id="goto">Open Board</button>
          <button id="copy">Copy Code</button>`;
       root.querySelector('#goto').onclick = () => location.hash = `#board?game=${g.id}`;
@@ -41,8 +40,7 @@ export function view() {
     try {
       const games = await findOpenGames();
       root.querySelector('#list').innerHTML = (games || []).map(g =>
-        `<div>${g.id} | turn: ${g.CurrentTurn || '-'}
-          | <button data-id="${g.id}">Join</button></div>`).join('');
+        `<div>${g.id} | turn: ${g.CurrentTurn || '-'} | <button data-id="${g.id}">Join</button></div>`).join('');
     } catch {}
   })();
 
@@ -51,6 +49,5 @@ export function view() {
     try { await joinGame(btn.dataset.id); location.hash = `#board?game=${btn.dataset.id}`; }
     catch (e2) { msg.textContent = e2.message; }
   });
-
   return root;
 }
